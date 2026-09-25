@@ -1,68 +1,48 @@
-# Deploying Star to AWS EC2
+# Deployment
 
-This guide provisions a free-tier EC2 instance and wires up the GitHub Actions
-pipeline so every push to `main` redeploys the bot automatically.
+Star runs on AWS EC2 in Docker. GitHub Actions redeploys it on pushes to `main`.
 
-## 1. Create the Discord application
+## Discord setup
 
-1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) and create an application.
-2. Under **Bot**, copy the token (this is `BOT_TOKEN`).
-3. Enable the **Message Content Intent** under Privileged Gateway Intents (required for XP tracking).
-4. Under **OAuth2 → URL Generator**, select the `bot` and `applications.commands` scopes, then invite the bot to your server with the generated URL. No special permissions are needed beyond sending messages.
+Create an application in the [Discord Developer Portal](https://discord.com/developers/applications), get its bot token, and enable Message Content Intent.
 
-## 2. Launch the EC2 instance
+Invite it to your server using the `bot` and `applications.commands` scopes. Give it permission to view channels and send messages.
 
-1. In the AWS console, launch an instance:
-   - **AMI**: Ubuntu Server 24.04 LTS (arm64)
-   - **Type**: `t4g.micro` (free tier eligible) — the bot idles at well under 256 MB
-   - **Key pair**: create one, download the `.pem` file
-   - **Security group**: allow inbound SSH (port 22) only. The bot makes outbound connections to Discord; nothing needs to reach it.
-2. SSH in and install Docker:
+## EC2 setup
+
+Launch an Ubuntu 24.04 ARM64 instance, such as a `t4g.micro`, with SSH access. Save your SSH private key.
+
+Connect and install Docker:
 
 ```bash
 ssh -i star.pem ubuntu@<EC2_HOST>
-sudo apt-get update && sudo apt-get install -y docker.io
+sudo apt-get update
+sudo apt-get install -y docker.io
 sudo usermod -aG docker ubuntu
-# log out and back in for the group change to take effect
 ```
 
-## 3. Configure GitHub repository secrets
+Log out and reconnect for the group change to take effect.
 
-In the repo, go to **Settings → Secrets and variables → Actions** and add:
+## GitHub secrets
+
+Add these under **Settings → Secrets and variables → Actions**:
 
 | Secret | Value |
 | --- | --- |
-| `EC2_HOST` | Public DNS or IP of the instance |
-| `EC2_SSH_KEY` | Contents of the `.pem` private key |
+| `EC2_HOST` | Instance public IP or DNS |
+| `EC2_SSH_KEY` | SSH private key contents |
 | `BOT_TOKEN` | Discord bot token |
 
-## 4. Deploy
+## Deploy
 
-Push to `main` (or run the **Deploy** workflow manually from the Actions tab).
-The pipeline builds the Docker image, ships it to the instance over SSH, and
-restarts the container. XP data persists in the `star-data` Docker volume
-across deployments.
+Push to `main` or manually run the **Deploy** workflow in GitHub Actions.
 
-Verify it worked:
+The workflow builds the image and replaces the running container. XP data stays in the `star-data` Docker volume.
+
+Check the logs:
 
 ```bash
 ssh -i star.pem ubuntu@<EC2_HOST> docker logs -f star
 ```
 
-You should see `Star is online in N guild(s)`.
-
-## Running locally instead
-
-```bash
-# Option A: config file (create config.properties with BOT_TOKEN=...)
-mvn package && java -jar target/star.jar
-
-# Option B: Docker
-docker build -t star .
-docker run -d --name star -e BOT_TOKEN=your-token -v star-data:/data star
-```
-
-## Cost notes
-
-- `t4g.micro` is covered by the AWS free tier for the first 12 months; after that it is roughly $6/month on-demand, or ~$2.50/month with a 1-year savings plan.
-- There are no other billable resources: no load balancer, no RDS (SQLite lives on the instance), no NAT gateway.
+AWS charges depend on your account, region, and resources used.
