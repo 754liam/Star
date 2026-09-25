@@ -1,75 +1,44 @@
 # Star
 
-A Discord engagement bot for the Rutgers CS community. Members earn XP for
-participating in chat, level up on a quadratic curve, and compete on a
-per-server leaderboard. State is persisted in SQLite, the bot ships as a
-Docker image, and every push to `main` is tested and deployed to AWS EC2
-through GitHub Actions.
+Star is a Discord bot for the Rutgers CS community that tracks activity using an XP and leveling system.
+
+## Features
+
+- Earn XP by sending messages
+- 60-second XP cooldown per user
+- Quadratic leveling system
+- Per-server leaderboards
+- Level-up announcements
+- SQLite persistence
+- Dockerized deployment to AWS EC2
 
 ## Commands
 
-| Command | Description |
-| --- | --- |
-| `/rank [member]` | Level, total XP, progress to the next level, and server rank |
-| `/leaderboard` | Top 10 most active members of the server |
-| `/ping` | Health check with gateway latency |
+- `/rank [member]` — View level, XP, progress, and server rank
+- `/leaderboard` — View the top 10 members by XP
+- `/ping` — Check bot latency
 
-XP is awarded per message (15–25 XP, random) with a 60-second per-user
-cooldown to prevent farming. Reaching level `n` requires `100·n²` total XP,
-and level-ups are announced in the channel.
+## Tech Stack
 
-## Architecture
+Java 21, JDA, SQLite, Maven, Docker, GitHub Actions, and AWS EC2.
 
-```
-                      ┌─────────────────────────────────────────┐
-                      │                Star                   │
- Discord Gateway ───► │  XpListener ──► XpService ──► XpRepo ──►│──► SQLite
-   (JDA, websocket)   │                    ▲                    │   (/data volume)
-                      │  CommandRegistry ──┘                    │
-                      │   ├── /ping                             │
-                      │   ├── /rank                             │
-                      │   └── /leaderboard                      │
-                      └─────────────────────────────────────────┘
-```
-
-- **`com.star.config`** — configuration from environment variables, with a
-  `config.properties` fallback for local development. No secrets in the image
-  or the repo.
-- **`com.star.command`** — a small slash-command framework: each command is
-  a self-contained class implementing `SlashCommand`, and `CommandRegistry`
-  routes interactions by name. Adding a command is one class plus one line in
-  `Star.java`.
-- **`com.star.xp`** — the XP domain: leveling math (`XpMath`), business
-  rules like cooldowns and level-up detection (`XpService`), and persistence
-  (`XpRepository`). JDA dispatches events from a thread pool, so repository
-  access is synchronized over the single SQLite connection.
-- **`com.star.db`** — SQLite bootstrap and schema. Profiles are keyed by
-  `(guild_id, user_id)` with an index on `(guild_id, xp DESC)` so leaderboard
-  queries stay fast.
-
-## Development
-
-Requires JDK 21 and Maven.
+## Running Locally
 
 ```bash
-cp config.example.properties config.properties   # add your bot token
-mvn test                                          # run the test suite
-mvn package && java -jar target/star.jar        # build and run
+cp config.example.properties config.properties
+mvn test
+mvn package
+java -jar target/star.jar
 ```
 
-The XP engine is fully unit-tested (deterministic via injected `Clock` and
-seeded `Random`) against an in-memory SQLite database — see `src/test`.
+Add your Discord bot token to `config.properties` before running.
 
 ## Deployment
 
-CI runs the test suite and a Docker build on every push and pull request.
-Pushes to `main` additionally trigger a deployment: the image is built in CI,
-shipped to an EC2 `t4g.micro` over SSH, and restarted with the XP database on
-a persistent volume.
+GitHub Actions runs tests and builds the Docker image on every push. Pushes to `main` deploy the latest version to EC2.
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for full setup instructions
-(Discord application, EC2 provisioning, GitHub secrets).
+See `docs/DEPLOYMENT.md` for setup instructions.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT
