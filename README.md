@@ -1,44 +1,30 @@
 # Star
 
-Star is a Discord bot for the Rutgers CS community that tracks activity using an XP and leveling system.
+A Discord bot for the Rutgers CS community. Members earn XP by chatting, level up, and compete on server leaderboards.
 
-## Features
-
-- Earn XP by sending messages
-- 60-second XP cooldown per user
-- Quadratic leveling system
-- Per-server leaderboards
-- Level-up announcements
-- SQLite persistence
-- Dockerized deployment to AWS EC2
+Built with Java 21, JDA, and SQLite. Deployed to AWS EC2 with Docker and GitHub Actions.
 
 ## Commands
 
-- `/rank [member]` — View level, XP, progress, and server rank
-- `/leaderboard` — View the top 10 members by XP
-- `/ping` — Check bot latency
+- `/rank [member]` — view level, XP, and server rank
+- `/leaderboard` — top 10 members by XP
+- `/ping` — check bot latency
 
-## Tech Stack
+## Run locally
 
-Java 21, JDA, SQLite, Maven, Docker, GitHub Actions, and AWS EC2.
+Requires Java 21 and Maven.
 
-## Running Locally
+Copy `config.example.properties` to `config.properties` and add your bot token.
 
 ```bash
-cp config.example.properties config.properties
-mvn test
 mvn package
 java -jar target/star.jar
 ```
 
-Add your Discord bot token to `config.properties` before running.
+Run tests with `mvn test`.
 
-## Deployment
-
-GitHub Actions runs tests and builds the Docker image on every push. Pushes to `main` deploy the latest version to EC2.
-
-See `docs/DEPLOYMENT.md` for setup instructions.
+See [deployment instructions](docs/DEPLOYMENT.md) for hosting setup.
 
 ## License
 
-MIT
+[MIT](LICENSE)
